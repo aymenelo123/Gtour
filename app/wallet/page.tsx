@@ -75,8 +75,8 @@ export default function WalletPage() {
               <Wallet size={20} />
               <span className="font-bold">الرصيد المتاح</span>
             </div>
-            <h1 className="text-5xl font-black text-white">${balance.toFixed(2)}</h1>
-            <p className="text-sm text-muted-foreground mt-2">+ $0.00 أرباح اليوم</p>
+            <h1 className="text-5xl font-black text-white">{balance.toFixed(2)} DA</h1>
+            <p className="text-sm text-muted-foreground mt-2">+ 0.00 DA أرباح اليوم</p>
           </CardContent>
         </Card>
 
@@ -90,7 +90,7 @@ export default function WalletPage() {
                 className="flex-1 h-12 bg-secondary hover:bg-secondary/90 text-white font-bold gap-2"
               >
                 <ArrowDownRight size={18} />
-                إيداع (Stripe)
+                إيداع رصيد
               </Button>
               <Button variant="outline" className="flex-1 h-12 border-border hover:bg-white/5 font-bold gap-2">
                 <ArrowUpRight size={18} />
@@ -138,7 +138,7 @@ export default function WalletPage() {
                     <span className={`text-lg font-bold font-mono ${
                       tx.amount > 0 ? 'text-secondary' : 'text-white'
                     }`}>
-                      {tx.amount > 0 ? '+' : ''}{tx.amount.toFixed(2)}$
+                      {tx.amount > 0 ? '+' : ''}{tx.amount.toFixed(2)} DA
                     </span>
                     <Badge variant="outline" className={`${
                       tx.status === 'مكتمل' || tx.status === 'completed' ? 'border-secondary/50 text-secondary' : 'border-yellow-500/50 text-yellow-500'

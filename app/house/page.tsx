@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, ZapIcon } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 
 export default function HouseMode() {
   const houseEvents = [
@@ -35,7 +36,12 @@ export default function HouseMode() {
                   <Badge variant="outline" className="text-red-400 border-red-900/50 bg-red-900/20">
                     ضد {event.opponent}
                   </Badge>
-                  <span className="text-2xl">{gameInfo?.icon}</span>
+                  <span className="text-2xl text-slate-400">
+                    {gameInfo && gameInfo.iconName && (() => {
+                      const Icon = LucideIcons[gameInfo.iconName as keyof typeof LucideIcons] as React.ElementType;
+                      return Icon ? <Icon className="w-8 h-8" /> : null;
+                    })()}
+                  </span>
                 </div>
                 <CardTitle className="text-xl text-white mt-4 leading-relaxed">{event.title}</CardTitle>
               </CardHeader>
@@ -49,7 +55,7 @@ export default function HouseMode() {
                 
                 <div className="flex gap-2">
                   <Button className="w-full h-12 bg-white/5 hover:bg-white/10 text-white border border-white/10">
-                    الرهان بـ $10
+                    الرهان بـ 10 DA
                   </Button>
                   <Button className="w-full h-12 bg-red-600 hover:bg-red-700 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]">
                     <ZapIcon size={16} className="ml-2" />
