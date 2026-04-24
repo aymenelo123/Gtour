@@ -18,8 +18,19 @@ export default function DepositPage() {
 
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-    
+
+    // --- Frontend Guard: verify a live, server-confirmed session before any DB write ---
+    const { data: { user: liveUser }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !liveUser) {
+      setMessage({
+        type: "error",
+        text: "جلستك منتهية أو غير مصادق عليها. الرجاء تسجيل الدخول مجدداً."
+      });
+      return;
+    }
+    // ----------------------------------------------------------------------------------
+
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       setMessage({ type: "error", text: "الرجاء إدخال مبلغ صحيح أكبر من 0." });
       return;
@@ -29,30 +40,30 @@ export default function DepositPage() {
       setMessage({ type: "error", text: "الرجاء إدخال رقم العملية (Reference ID)." });
       return;
     }
-    
+
     setIsSubmitting(true);
     setMessage(null);
-    
+
     try {
-      // In a real app we'd also validate if this reference ID already exists
+      // Use the server-verified liveUser.id — not a hardcoded or stale context value
       const { error } = await supabase
         .from("transactions")
         .insert({
-          user_id: user.id,
+          user_id: liveUser.id,
           type: "deposit",
           amount: Number(amount),
           status: "pending",
-          reference_id: referenceId.trim()
+          reference_id: referenceId.trim(),
         });
 
       if (error) throw error;
-      
+
       setMessage({ type: "success", text: "تم إرسال طلب الشحن بنجاح! سيتم تحديث رصيدك بعد المراجعة." });
       setAmount("");
       setReferenceId("");
-      
+
       // We don't refreshProfile immediately because the balance is still pending
-      
+
     } catch (err: any) {
       console.error(err);
       setMessage({ type: "error", text: err.message || "حدث خطأ أثناء إرسال الطلب." });

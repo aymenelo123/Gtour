@@ -7,9 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Trophy, Wallet, Calendar, ArrowUpRight, ArrowDownRight, RefreshCcw, UserCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useWallet } from "@/context/WalletContext";
 
 export default function DashboardPage() {
   const { user, profile, isLoading, refreshProfile } = useAuth();
+  const { balance } = useWallet();
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoadingTx, setIsLoadingTx] = useState(true);
 
@@ -85,7 +87,7 @@ export default function DashboardPage() {
                 <Wallet className="text-secondary w-6 h-6" />
                 <div className="flex flex-col">
                   <span className="text-xs text-slate-400">الرصيد الحالي</span>
-                  <span className="text-xl font-bold text-white">{profile?.balance ? profile.balance.toFixed(2) : "0.00"} DA</span>
+                  <span className="text-xl font-bold text-white">{balance ? balance.toFixed(2) : "0.00"} DA</span>
                 </div>
               </div>
               

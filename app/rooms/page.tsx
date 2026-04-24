@@ -69,7 +69,8 @@ function RoomsContent() {
     setIsLoading(true);
     
     try {
-      if (!deductBalance(numericAmount)) {
+      const deducted = await deductBalance(numericAmount);
+      if (!deducted) {
         throw new Error("حدث خطأ أثناء الخصم.");
       }
       
@@ -179,19 +180,22 @@ function RoomsContent() {
                   <Button 
                     className="w-full h-12 text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-0 shadow-[0_0_15px_rgba(99,102,241,0.4)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)] transition-all duration-300"
                     onClick={() => {
-                      if (balance < match.amount) {
-                        toast.error('رصيد غير كافٍ. يرجى شحن محفظتك.', {
-                          className: 'border-red-500/50 bg-red-950/90 text-white'
-                        });
-                        return;
-                      }
-                      
-                      if (deductBalance(match.amount)) {
-                        toast.success(`تم خصم ${match.amount} DA. جاري الدخول للحلبة...`, {
-                          className: 'border-indigo-500/50 bg-indigo-950/90 text-white'
-                        });
-                        router.push(`/rooms/${match.id}`);
-                      }
+                      void (async () => {
+                        if (balance < match.amount) {
+                          toast.error('رصيد غير كافٍ. يرجى شحن محفظتك.', {
+                            className: 'border-red-500/50 bg-red-950/90 text-white'
+                          });
+                          return;
+                        }
+
+                        const success = await deductBalance(match.amount);
+                        if (success) {
+                          toast.success(`تم خصم ${match.amount} DA. جاري الدخول للحلبة...`, {
+                            className: 'border-indigo-500/50 bg-indigo-950/90 text-white'
+                          });
+                          router.push(`/rooms/${match.id}`);
+                        }
+                      })();
                     }}
                   >
                     العب مقابل {match.amount} DA

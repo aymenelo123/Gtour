@@ -8,7 +8,6 @@ import { useWallet } from "@/context/WalletContext";
 import { Volume2, VolumeX, Wallet, UserCircle, LogOut, ShieldCheck } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -19,36 +18,16 @@ export default function Navbar() {
   const [imageError, setImageError] = useState(false);
   const [animateBalance, setAnimateBalance] = useState(false);
 
+  console.log("NAVBAR_BALANCE_SOURCE:", balance, "from user:", user?.id);
+
   useEffect(() => {
     setAnimateBalance(true);
     const timeout = setTimeout(() => setAnimateBalance(false), 300);
     return () => clearTimeout(timeout);
   }, [balance]);
 
-  useEffect(() => {
-    if (!user) return;
-
-    // Realtime subscription to keep balance in sync with database
-    const channel = supabase
-      .channel("navbar-profile-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "profiles",
-          filter: `id=eq.${user.id}`,
-        },
-        () => {
-          refreshProfile();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, refreshProfile]);
+  // Balance changes are now handled entirely by AuthProvider → onAuthStateChange.
+  // No local realtime subscription needed here — avoids duplicate fetches.
 
   useEffect(() => {
     setImageError(false);
