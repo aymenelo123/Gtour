@@ -17,6 +17,12 @@ export default function Navbar() {
   const { balance, isLoadingBalance } = useWallet();
   const [imageError, setImageError] = useState(false);
   const [animateBalance, setAnimateBalance] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [fallbackBalance, setFallbackBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (balance === null) return;
@@ -24,6 +30,24 @@ export default function Navbar() {
     const timeout = setTimeout(() => setAnimateBalance(false), 300);
     return () => clearTimeout(timeout);
   }, [balance]);
+
+  useEffect(() => {
+    // Temporary fallback fetch
+    if (user?.id && balance === null && isMounted) {
+      import("@/lib/supabase").then(({ supabase }) => {
+        supabase.from('profiles').select('balance').eq('id', user.id).single()
+          .then(({ data }) => {
+            if (data && data.balance !== undefined) setFallbackBalance(data.balance);
+          });
+      });
+    }
+  }, [user?.id, balance, isMounted]);
+
+  console.log("NAVBAR_AUTH_STATUS:", !!user);
+  console.log("NAVBAR_BALANCE_VAL:", balance);
+  console.log("NAVBAR_MOUNTED:", isMounted);
+
+  const finalBalance = balance !== null ? balance : fallbackBalance;
 
   // Balance changes are now handled entirely by AuthProvider → onAuthStateChange.
   // No local realtime subscription needed here — avoids duplicate fetches.
@@ -78,19 +102,11 @@ export default function Navbar() {
               {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
             </button>
             
-            {isLoading ? (
-              <div className="flex items-center gap-4 opacity-50 animate-pulse pointer-events-none">
-                <div className="hidden sm:flex items-center gap-2 text-sm font-bold text-muted-foreground mr-2">
-                  <Wallet size={16} />
-                  <span>شحن الرصيد</span>
-                </div>
-                <div className="flex items-center gap-2 bg-background border border-border px-3 py-1.5 rounded-md">
-                  <Wallet size={16} className="text-secondary" />
-                  <span className="text-sm font-bold text-foreground">--- DA</span>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-slate-800 border border-[#2A3441]" />
-              </div>
-            ) : user ? (
+            {!isMounted ? (
+              // Hydration safe placeholder: occupies the same space
+              <div className="flex items-center gap-2 h-10 w-32 animate-pulse bg-transparent"></div>
+            ) : (user || isLoading) ? (
+              // Show actual UI components if user exists OR if we are still verifying an existing session
               <>
                 {profile?.is_admin && (
                   <Link href="/dashboard/admin/deposits" className="hidden lg:flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-red-500 transition-colors mr-2">
@@ -105,23 +121,17 @@ export default function Navbar() {
                 </Link>
 
                 <Link href="/dashboard">
-                  <div className={`flex items-center gap-2 bg-background border px-3 py-1.5 rounded-md hover:border-primary transition-all cursor-pointer ${animateBalance ? 'border-primary shadow-[0_0_15px_rgba(99,102,241,0.5)] scale-105' : 'border-border'}`}>
-                    <Wallet size={16} className={`transition-colors ${animateBalance ? 'text-primary' : 'text-secondary'}`} />
-                    {isLoadingBalance ? (
-                      <span className="text-sm font-bold text-foreground opacity-50 animate-pulse">
-                        --- DA
-                      </span>
-                    ) : (
-                      <span className={`text-sm font-bold transition-colors ${animateBalance ? 'text-primary drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]' : 'text-foreground'}`}>
-                        {balance !== null ? balance.toFixed(2) : "0.00"} DA
-                      </span>
-                    )}
+                  <div className={`flex items-center gap-2 bg-background border px-3 py-1.5 rounded-md hover:border-primary transition-all cursor-pointer ${animateBalance && !isLoading ? 'border-primary shadow-[0_0_15px_rgba(99,102,241,0.5)] scale-105' : 'border-border'}`}>
+                    <Wallet size={16} className={`transition-colors ${(animateBalance && !isLoading) ? 'text-primary' : 'text-secondary'}`} />
+                    <span className={`text-sm font-bold transition-colors ${(animateBalance && !isLoading) ? 'text-primary drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]' : 'text-foreground'} ${isLoading || finalBalance === null ? 'animate-pulse opacity-50' : ''}`}>
+                      {isLoading || finalBalance === null ? "---" : finalBalance.toFixed(2)} DA
+                    </span>
                   </div>
                 </Link>
                 
                 <div className="flex items-center gap-2 mr-2">
                   <Link href="/dashboard/settings" className="flex items-center gap-2 hover:opacity-80 transition-opacity group">
-                    {profile?.avatar_url && !imageError ? (
+                    {profile?.avatar_url && !imageError && !isLoading ? (
                       <div className="w-8 h-8 rounded-full overflow-hidden border border-[#2A3441] group-hover:border-primary transition-colors">
                          <img 
                            src={profile.avatar_url} 
@@ -131,20 +141,21 @@ export default function Navbar() {
                          />
                       </div>
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-slate-800 border border-[#2A3441] flex items-center justify-center group-hover:border-primary transition-colors">
+                      <div className={`w-8 h-8 rounded-full bg-slate-800 border border-[#2A3441] flex items-center justify-center group-hover:border-primary transition-colors ${isLoading ? 'animate-pulse' : ''}`}>
                         <UserCircle className="w-5 h-5 text-slate-400" />
                       </div>
                     )}
-                    <span className="text-sm font-medium text-slate-300 hidden sm:inline-block group-hover:text-white transition-colors">
-                      {profile?.username || user.email?.split('@')[0]}
+                    <span className={`text-sm font-medium text-slate-300 hidden sm:inline-block group-hover:text-white transition-colors ${isLoading ? 'animate-pulse opacity-50' : ''}`}>
+                      {isLoading ? "جاري التحميل..." : (profile?.username || user?.email?.split('@')[0])}
                     </span>
                   </Link>
                   <Button 
                     variant="ghost" 
                     size="icon" 
                     onClick={handleSignOut}
-                    className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                    className={`text-muted-foreground hover:text-red-500 hover:bg-red-500/10 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
                     title="تسجيل الخروج"
+                    disabled={isLoading}
                   >
                     <LogOut size={18} />
                   </Button>
