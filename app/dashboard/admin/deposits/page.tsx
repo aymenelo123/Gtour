@@ -29,18 +29,20 @@ export default function AdminDepositsPage() {
   const fetchPendingDeposits = async () => {
     try {
       setIsFetching(true);
-      // We join transactions with profiles to get the username
+      // Fetch from deposits table and join with profiles to get email and username
       const { data, error } = await supabase
-        .from("transactions")
+        .from("deposits")
         .select(`
           *,
-          profiles:user_id (username)
+          profiles:user_id (email, username)
         `)
-        .eq("type", "deposit")
         .eq("status", "pending")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase fetchPendingDeposits error:", error);
+        throw error;
+      }
       setDeposits(data || []);
     } catch (err) {
       console.error("Error fetching deposits:", err);
@@ -51,20 +53,36 @@ export default function AdminDepositsPage() {
 
   const handleApprove = async (txId: string) => {
     try {
-      setProcessingId(txId);
-      // Use the Atomic RPC stored procedure defined in supabase-schema.sql
-      const { error } = await supabase.rpc('approve_deposit', { tx_id: txId });
-      
-      if (error) throw error;
-      
-      // Remove from list
+      // Optimistic UI Update: Instantly remove from list to feel "Fast and Direct"
       setDeposits(prev => prev.filter(d => d.id !== txId));
+      setProcessingId(txId);
+      
+      // Call the user-specified RPC
+      const { error } = await supabase.rpc('admin_deposit_update', { deposit_id: txId });
+      
+      if (error) {
+        console.error("Supabase admin_deposit_update RPC error:", error);
+        throw error;
+      }
+      
+      // Also explicitly update the table status as requested by the user, just in case the RPC doesn't do it
+      const { error: updateError } = await supabase
+        .from('deposits')
+        .update({ status: 'completed' })
+        .eq('id', txId);
+        
+      if (updateError) {
+        console.error("Supabase deposits table update error:", updateError);
+        throw updateError;
+      }
       
       // Force an immediate global profile refresh so if the Admin is approving their own test deposit, their Navbar updates instantly
       await refreshProfile();
       
     } catch (err: any) {
       console.error("Error approving:", err);
+      // Revert optimistic update on failure (fetch fresh list)
+      fetchPendingDeposits();
       alert(err.message || "حدث خطأ أثناء الموافقة.");
     } finally {
       setProcessingId(null);
@@ -75,20 +93,23 @@ export default function AdminDepositsPage() {
     if (!confirm("هل أنت متأكد من رفض هذا الشحن؟")) return;
     
     try {
+      // Optimistic UI Update
+      setDeposits(prev => prev.filter(d => d.id !== txId));
       setProcessingId(txId);
       
       const { error } = await supabase
-        .from("transactions")
+        .from("deposits")
         .update({ status: 'failed' })
         .eq('id', txId);
         
-      if (error) throw error;
-      
-      // Remove from list
-      setDeposits(prev => prev.filter(d => d.id !== txId));
+      if (error) {
+        console.error("Supabase handleReject error:", error);
+        throw error;
+      }
       
     } catch (err: any) {
       console.error("Error rejecting:", err);
+      fetchPendingDeposits(); // Revert optimistic update
       alert("حدث خطأ أثناء الرفض.");
     } finally {
       setProcessingId(null);
@@ -183,7 +204,7 @@ export default function AdminDepositsPage() {
                       deposits.map((tx) => (
                         <tr key={tx.id} className="border-b border-[#2A3441] hover:bg-[#1A2129] transition-colors">
                           <td className="px-6 py-4 font-bold text-white">
-                            {tx.profiles?.username || "غير محدد"}
+                            {tx.profiles?.username || tx.profiles?.email || "غير محدد"}
                           </td>
                           <td className="px-6 py-4 font-bold text-emerald-500">
                             +{tx.amount.toFixed(2)} DA
