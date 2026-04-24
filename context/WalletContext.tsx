@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 
@@ -17,8 +17,8 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const [balance, setBalance] = useState<number>(0);
 
-  const fetchBalance = async () => {
-    if (!user || !user.id) {
+  const fetchBalance = useCallback(async () => {
+    if (!user?.id) {
       setBalance(0);
       return;
     }
@@ -34,17 +34,17 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     
-    if (data) {
+    if (data && data.balance !== undefined) {
       setBalance(data.balance);
     }
-  };
+  }, [user?.id]); // Strictly depends on user.id string primitive
 
   // This prevents the balance from reverting to 0 on page refresh
   useEffect(() => {
     fetchBalance();
-  }, [user]);
+  }, [fetchBalance]);
 
-  const deductBalance = async (amount: number) => {
+  const deductBalance = useCallback(async (amount: number) => {
     // Calling the RPC function exactly as defined in Supabase with the 'amount' parameter
     const { error } = await supabase.rpc('deduct_balance', { amount });
     
@@ -56,17 +56,17 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
     // Force immediate UI sync after successful deduction
     await fetchBalance();
     return true;
-  };
+  }, [fetchBalance]);
 
   // Preserved addWinnings for Admin dashboard functionality
-  const addWinnings = async (amount: number) => {
+  const addWinnings = useCallback(async (amount: number) => {
     const { error } = await supabase.rpc('add_winnings', { amount });
     if (error) {
       console.error('[WalletContext] add_winnings RPC error:', error.message);
       return;
     }
     await fetchBalance();
-  };
+  }, [fetchBalance]);
 
   return (
     <WalletContext.Provider value={{ balance, deductBalance, fetchBalance, addWinnings }}>

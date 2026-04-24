@@ -18,8 +18,6 @@ export default function Navbar() {
   const [imageError, setImageError] = useState(false);
   const [animateBalance, setAnimateBalance] = useState(false);
 
-  console.log("NAVBAR_BALANCE_SOURCE:", balance, "from user:", user?.id);
-
   useEffect(() => {
     setAnimateBalance(true);
     const timeout = setTimeout(() => setAnimateBalance(false), 300);
