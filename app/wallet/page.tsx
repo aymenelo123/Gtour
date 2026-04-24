@@ -60,7 +60,7 @@ export default function WalletPage() {
               {authLoading ? (
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
               ) : (
-                <h1 className="text-5xl font-black text-white">{balance.toFixed(2)} DA</h1>
+                <h1 className="text-5xl font-black text-white">{balance !== null ? balance.toFixed(2) : "0.00"} DA</h1>
               )}
               <p className="text-sm text-muted-foreground mt-2">+ 0.00 DA أرباح اليوم</p>
             </CardContent>

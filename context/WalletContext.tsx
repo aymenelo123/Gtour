@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 
 interface WalletContextType {
-  balance: number;
+  balance: number | null;
+  isLoadingBalance: boolean;
   fetchBalance: () => Promise<void>;
   deductBalance: (amount: number) => Promise<boolean>;
   addWinnings: (amount: number) => Promise<void>;
@@ -14,15 +15,18 @@ interface WalletContextType {
 const WalletContext = createContext<WalletContextType | null>(null);
 
 export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
-  const [balance, setBalance] = useState<number>(0);
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const [balance, setBalance] = useState<number | null>(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState<boolean>(true);
 
   const fetchBalance = useCallback(async () => {
     if (!user?.id) {
       setBalance(0);
+      setIsLoadingBalance(false);
       return;
     }
     
+    setIsLoadingBalance(true);
     const { data, error } = await supabase
       .from('profiles')
       .select('balance')
@@ -30,22 +34,26 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
       .single();
       
     if (error) {
-      console.error('Error fetching balance:', error);
-      return;
-    }
-    
-    if (data && data.balance !== undefined) {
+      // Don't log if the row is missing when they first sign up
+      if (error.code !== 'PGRST116') {
+        console.error('[WalletContext] Error fetching balance:', error);
+      }
+      setBalance(0);
+    } else if (data && data.balance !== undefined) {
       setBalance(data.balance);
     }
+    
+    setIsLoadingBalance(false);
   }, [user?.id]); // Strictly depends on user.id string primitive
 
-  // This prevents the balance from reverting to 0 on page refresh
   useEffect(() => {
-    fetchBalance();
-  }, [fetchBalance]);
+    // Only fetch once auth has initialized
+    if (!isAuthLoading) {
+      fetchBalance();
+    }
+  }, [fetchBalance, isAuthLoading]);
 
   const deductBalance = useCallback(async (amount: number) => {
-    // Calling the RPC function exactly as defined in Supabase with the 'amount' parameter
     const { error } = await supabase.rpc('deduct_balance', { amount });
     
     if (error) {
@@ -53,12 +61,10 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
       return false;
     }
     
-    // Force immediate UI sync after successful deduction
     await fetchBalance();
     return true;
   }, [fetchBalance]);
 
-  // Preserved addWinnings for Admin dashboard functionality
   const addWinnings = useCallback(async (amount: number) => {
     const { error } = await supabase.rpc('add_winnings', { amount });
     if (error) {
@@ -69,7 +75,7 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
   }, [fetchBalance]);
 
   return (
-    <WalletContext.Provider value={{ balance, deductBalance, fetchBalance, addWinnings }}>
+    <WalletContext.Provider value={{ balance, isLoadingBalance, deductBalance, fetchBalance, addWinnings }}>
       {children}
     </WalletContext.Provider>
   );

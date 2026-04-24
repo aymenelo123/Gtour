@@ -137,7 +137,7 @@ export default function Home() {
                         return;
                       }
 
-                      if (balance < match.amount) {
+                      if ((balance ?? 0) < match.amount) {
                         toast.error('رصيد غير كافٍ. يرجى شحن محفظتك.', {
                           className: 'border-red-500/50 bg-red-950/90 text-white'
                         });

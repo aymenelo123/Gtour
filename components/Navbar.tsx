@@ -14,11 +14,12 @@ export default function Navbar() {
   const router = useRouter();
   const { isMuted, toggleMute } = useAudio();
   const { user, profile, isLoading, signOut, refreshProfile } = useAuth();
-  const { balance } = useWallet();
+  const { balance, isLoadingBalance } = useWallet();
   const [imageError, setImageError] = useState(false);
   const [animateBalance, setAnimateBalance] = useState(false);
 
   useEffect(() => {
+    if (balance === null) return;
     setAnimateBalance(true);
     const timeout = setTimeout(() => setAnimateBalance(false), 300);
     return () => clearTimeout(timeout);
@@ -42,8 +43,6 @@ export default function Navbar() {
     await signOut();
     router.push("/");
   };
-
-  const displayBalance = balance;
 
   return (
     <nav className="fixed top-0 w-full z-50 bg-card border-b border-border shadow-lg">
@@ -80,9 +79,16 @@ export default function Navbar() {
             </button>
             
             {isLoading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-24 h-8 bg-slate-800/50 rounded-md animate-pulse"></div>
-                <div className="w-8 h-8 bg-slate-800/50 rounded-full animate-pulse"></div>
+              <div className="flex items-center gap-4 opacity-50 animate-pulse pointer-events-none">
+                <div className="hidden sm:flex items-center gap-2 text-sm font-bold text-muted-foreground mr-2">
+                  <Wallet size={16} />
+                  <span>شحن الرصيد</span>
+                </div>
+                <div className="flex items-center gap-2 bg-background border border-border px-3 py-1.5 rounded-md">
+                  <Wallet size={16} className="text-secondary" />
+                  <span className="text-sm font-bold text-foreground">--- DA</span>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-slate-800 border border-[#2A3441]" />
               </div>
             ) : user ? (
               <>
@@ -101,9 +107,15 @@ export default function Navbar() {
                 <Link href="/dashboard">
                   <div className={`flex items-center gap-2 bg-background border px-3 py-1.5 rounded-md hover:border-primary transition-all cursor-pointer ${animateBalance ? 'border-primary shadow-[0_0_15px_rgba(99,102,241,0.5)] scale-105' : 'border-border'}`}>
                     <Wallet size={16} className={`transition-colors ${animateBalance ? 'text-primary' : 'text-secondary'}`} />
-                    <span className={`text-sm font-bold transition-colors ${animateBalance ? 'text-primary drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]' : 'text-foreground'}`}>
-                      {displayBalance.toFixed(2)} DA
-                    </span>
+                    {isLoadingBalance ? (
+                      <span className="text-sm font-bold text-foreground opacity-50 animate-pulse">
+                        --- DA
+                      </span>
+                    ) : (
+                      <span className={`text-sm font-bold transition-colors ${animateBalance ? 'text-primary drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]' : 'text-foreground'}`}>
+                        {balance !== null ? balance.toFixed(2) : "0.00"} DA
+                      </span>
+                    )}
                   </div>
                 </Link>
                 

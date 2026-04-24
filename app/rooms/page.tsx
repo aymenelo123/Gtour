@@ -61,7 +61,7 @@ function RoomsContent() {
       return;
     }
     
-    if (numericAmount > balance) {
+    if (numericAmount > (balance ?? 0)) {
       setErrorMsg("رصيدك غير كافٍ.");
       return;
     }
@@ -181,7 +181,7 @@ function RoomsContent() {
                     className="w-full h-12 text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-0 shadow-[0_0_15px_rgba(99,102,241,0.4)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)] transition-all duration-300"
                     onClick={() => {
                       void (async () => {
-                        if (balance < match.amount) {
+                        if ((balance ?? 0) < match.amount) {
                           toast.error('رصيد غير كافٍ. يرجى شحن محفظتك.', {
                             className: 'border-red-500/50 bg-red-950/90 text-white'
                           });
@@ -247,7 +247,7 @@ function RoomsContent() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-sm text-slate-300 font-bold">مبلغ الرهان (رصيدك: {balance.toFixed(2)} DA)</label>
+                <label className="text-sm text-slate-300 font-bold">مبلغ الرهان (رصيدك: {balance !== null ? balance.toFixed(2) : "0.00"} DA)</label>
                 <Input 
                   type="number" 
                   placeholder="مثال: 50" 

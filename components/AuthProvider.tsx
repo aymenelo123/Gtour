@@ -143,12 +143,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (mounted) setIsLoading(false);
     });
 
-    // Safety: in case onAuthStateChange fires after a cold-start race condition
-    // we also manually trigger it once. We still go to the DB — NOT localStorage.
     (async () => {
+      // 1. Instantly unblock UI for guests using local session
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      if (!initialSession && mounted) {
+        setIsLoading(false);
+      }
+
+      // 2. Validate with secure network call
       const {
         data: { user: initialUser },
-      } = await supabase.auth.getUser(); // network call, not localStorage
+      } = await supabase.auth.getUser();
 
       if (!mounted) return;
 
