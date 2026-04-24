@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAudio } from "./AudioProvider";
 import { useAuth } from "./AuthProvider";
-import { useWallet } from "@/context/WalletContext";
 import { Volume2, VolumeX, Wallet, UserCircle, LogOut, ShieldCheck } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
@@ -14,43 +13,74 @@ export default function Navbar() {
   const router = useRouter();
   const { isMuted, toggleMute } = useAudio();
   const { user, profile, isLoading, signOut, refreshProfile } = useAuth();
-  const { balance, isLoadingBalance } = useWallet();
+  // Localized state to prevent Context Hell and Hydration Deadlock
+  const [localBalance, setLocalBalance] = useState<number | null>(null);
+  const [isLocalLoading, setIsLocalLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const [animateBalance, setAnimateBalance] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [fallbackBalance, setFallbackBalance] = useState<number | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    if (balance === null) return;
+    let mounted = true;
+    
+    const fetchBalanceDirectly = async () => {
+      try {
+        setIsLocalLoading(true);
+        // 1. Instant fallback to local session (no latency)
+        const { data: { session } } = await import("@/lib/supabase").then(({ supabase }) => supabase.auth.getSession());
+        
+        if (!session?.user) {
+          if (mounted) {
+             setLocalBalance(null);
+             setIsLocalLoading(false);
+          }
+          return;
+        }
+
+        // 2. Strict 5-second timeout fetch directly to profiles table
+        const { supabase } = await import("@/lib/supabase");
+        const fetchPromise = supabase
+          .from('profiles')
+          .select('balance')
+          .eq('id', session.user.id)
+          .single();
+
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Fetch timeout exceeded (5s)')), 5000)
+        );
+
+        const response = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
+        if (response.error) throw response.error;
+        
+        if (mounted) {
+          setLocalBalance(response.data?.balance ?? 0);
+        }
+      } catch (err) {
+        console.error("Navbar Balance Fetch Error:", err);
+        if (mounted) setLocalBalance(0); // Graceful fallback
+      } finally {
+        if (mounted) setIsLocalLoading(false);
+      }
+    };
+
+    fetchBalanceDirectly();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]); // Re-fetch if auth changes
+
+  useEffect(() => {
+    if (localBalance === null) return;
     setAnimateBalance(true);
     const timeout = setTimeout(() => setAnimateBalance(false), 300);
     return () => clearTimeout(timeout);
-  }, [balance]);
-
-  useEffect(() => {
-    // Temporary fallback fetch
-    if (user?.id && balance === null && isMounted) {
-      import("@/lib/supabase").then(({ supabase }) => {
-        supabase.from('profiles').select('balance').eq('id', user.id).single()
-          .then(({ data }) => {
-            if (data && data.balance !== undefined) setFallbackBalance(data.balance);
-          });
-      });
-    }
-  }, [user?.id, balance, isMounted]);
-
-  console.log("NAVBAR_AUTH_STATUS:", !!user);
-  console.log("NAVBAR_BALANCE_VAL:", balance);
-  console.log("NAVBAR_MOUNTED:", isMounted);
-
-  const finalBalance = balance !== null ? balance : fallbackBalance;
-
-  // Balance changes are now handled entirely by AuthProvider → onAuthStateChange.
-  // No local realtime subscription needed here — avoids duplicate fetches.
+  }, [localBalance]);
 
   useEffect(() => {
     setImageError(false);
@@ -121,10 +151,10 @@ export default function Navbar() {
                 </Link>
 
                 <Link href="/dashboard">
-                  <div className={`flex items-center gap-2 bg-background border px-3 py-1.5 rounded-md hover:border-primary transition-all cursor-pointer ${animateBalance && !isLoading ? 'border-primary shadow-[0_0_15px_rgba(99,102,241,0.5)] scale-105' : 'border-border'}`}>
-                    <Wallet size={16} className={`transition-colors ${(animateBalance && !isLoading) ? 'text-primary' : 'text-secondary'}`} />
-                    <span className={`text-sm font-bold transition-colors ${(animateBalance && !isLoading) ? 'text-primary drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]' : 'text-foreground'} ${isLoading || finalBalance === null ? 'animate-pulse opacity-50' : ''}`}>
-                      {isLoading || finalBalance === null ? "---" : finalBalance.toFixed(2)} DA
+                  <div className={`flex items-center gap-2 bg-background border px-3 py-1.5 rounded-md hover:border-primary transition-all cursor-pointer ${animateBalance && !isLocalLoading ? 'border-primary shadow-[0_0_15px_rgba(99,102,241,0.5)] scale-105' : 'border-border'}`}>
+                    <Wallet size={16} className={`transition-colors ${(animateBalance && !isLocalLoading) ? 'text-primary' : 'text-secondary'}`} />
+                    <span className={`text-sm font-bold transition-colors ${(animateBalance && !isLocalLoading) ? 'text-primary drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]' : 'text-foreground'} ${isLocalLoading || localBalance === null ? 'animate-pulse opacity-50' : ''}`}>
+                      {isLocalLoading || localBalance === null ? "---" : localBalance.toFixed(2)} DA
                     </span>
                   </div>
                 </Link>
