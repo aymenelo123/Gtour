@@ -16,31 +16,12 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Trophy, Swords, Zap, Search, Gamepad as GamepadIcon } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function Home() {
   const router = useRouter();
   const { balance, deductBalance } = useWallet();
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push("/login");
-      } else {
-        setLoading(false);
-      }
-    };
-    checkUser();
-  }, [router]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0E1217] flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  const { user } = useAuth();
 
   return (
     <div className="flex flex-col gap-12 pb-12">
@@ -148,6 +129,14 @@ export default function Home() {
                   <Button 
                     className="w-full h-12 text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-0 shadow-[0_0_15px_rgba(99,102,241,0.4)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)] transition-all duration-300"
                     onClick={async () => {
+                      if (!user) {
+                        toast.error('يرجى تسجيل الدخول للعب', {
+                          className: 'border-red-500/50 bg-red-950/90 text-white'
+                        });
+                        router.push('/login');
+                        return;
+                      }
+
                       if (balance < match.amount) {
                         toast.error('رصيد غير كافٍ. يرجى شحن محفظتك.', {
                           className: 'border-red-500/50 bg-red-950/90 text-white'
