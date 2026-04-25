@@ -45,18 +45,46 @@ export default function DepositPage() {
     setMessage(null);
 
     try {
-      // Use the server-verified liveUser.id — not a hardcoded or stale context value
+      // 1. PROFILE CHECK: Ensure the profile exists to avoid foreign key error
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", liveUser.id)
+        .maybeSingle();
+        
+      if (!existingProfile) {
+        // Create the profile on the fly
+        const { error: profileInsertError } = await supabase
+          .from("profiles")
+          .insert({
+            id: liveUser.id,
+            email: liveUser.email,
+            username: liveUser.email?.split('@')[0] || "User",
+            balance: 0,
+            is_admin: false
+          });
+          
+        if (profileInsertError) {
+          throw new Error("Error: Profile not synced");
+        }
+      }
+
+      // 2. Insert into deposits table
       const { error } = await supabase
-        .from("transactions")
+        .from("deposits")
         .insert({
           user_id: liveUser.id,
-          type: "deposit",
           amount: Number(amount),
           status: "pending",
           reference_id: referenceId.trim(),
         });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('foreign key constraint') || error.code === '23503') {
+          throw new Error("Error: Profile not synced");
+        }
+        throw error;
+      }
 
       setMessage({ type: "success", text: "تم إرسال طلب الشحن بنجاح! سيتم تحديث رصيدك بعد المراجعة." });
       setAmount("");
