@@ -10,8 +10,18 @@ import { supabase } from "@/lib/supabase";
 import { useWallet } from "@/context/WalletContext";
 
 export default function DashboardPage() {
-  const { user, profile, isLoading, refreshProfile } = useAuth();
+  const { user, isLoading } = useAuth();
   const { balance } = useWallet();
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+      if (data) setProfile(data);
+    };
+    fetchProfile();
+  }, [user]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoadingTx, setIsLoadingTx] = useState(true);
 
@@ -41,7 +51,6 @@ export default function DashboardPage() {
   const handleRefresh = async () => {
     if (!user) return;
     setIsLoadingTx(true);
-    await refreshProfile();
     const { data } = await supabase
       .from("transactions")
       .select("*")

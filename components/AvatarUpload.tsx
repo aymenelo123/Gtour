@@ -8,7 +8,7 @@ import { Camera, Loader2, Upload } from "lucide-react";
 import Image from "next/image";
 
 export default function AvatarUpload() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
@@ -80,7 +80,7 @@ export default function AvatarUpload() {
       }
       
       // Refresh context
-      await refreshProfile();
+      // await refreshProfile();
       setSuccess(true);
       
     } catch (err: any) {

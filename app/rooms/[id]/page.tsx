@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { useWallet } from "@/context/WalletContext";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,16 @@ import { mockMatches, mockGames } from "@/lib/mockData";
 export default function MatchArena() {
   const { id } = useParams();
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (user) {
+      supabase.from("profiles").select("*").eq("id", user.id).single().then(({data}) => {
+        if (data) setProfile(data);
+      });
+    }
+  }, [user]);
   const { addWinnings } = useWallet();
   
   const [matchData, setMatchData] = useState<any>(null);

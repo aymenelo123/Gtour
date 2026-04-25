@@ -10,8 +10,18 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
 export default function AdminDepositsPage() {
-  const { user, profile, isLoading, refreshProfile } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+      if (data) setProfile(data);
+    };
+    fetchProfile();
+  }, [user]);
   const [deposits, setDeposits] = useState<any[]>([]);
   const [isFetching, setIsFetching] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -76,8 +86,6 @@ export default function AdminDepositsPage() {
         throw updateError;
       }
       
-      // Force an immediate global profile refresh so if the Admin is approving their own test deposit, their Navbar updates instantly
-      await refreshProfile();
       
     } catch (err: any) {
       console.error("Error approving:", err);

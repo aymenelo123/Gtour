@@ -9,7 +9,7 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function DepositPage() {
-  const { user, refreshProfile } = useAuth();
+  const { user } = useAuth();
   
   const [amount, setAmount] = useState("");
   const [referenceId, setReferenceId] = useState("");
@@ -62,7 +62,6 @@ export default function DepositPage() {
       setAmount("");
       setReferenceId("");
 
-      // We don't refreshProfile immediately because the balance is still pending
 
     } catch (err: any) {
       console.error(err);

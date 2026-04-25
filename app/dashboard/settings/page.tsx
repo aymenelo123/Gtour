@@ -10,8 +10,17 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function SettingsPage() {
-  const { user, profile, refreshProfile } = useAuth();
-  
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+      if (data) setProfile(data);
+    };
+    fetchProfile();
+  }, [user]);
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
@@ -55,9 +64,7 @@ export default function SettingsPage() {
 
       if (error) throw error;
       
-      await refreshProfile();
       setMessage({ type: "success", text: "تم حفظ التغييرات بنجاح!" });
-      
     } catch (err: any) {
       console.error(err);
       setMessage({ type: "error", text: err.message || "حدث خطأ أثناء حفظ التغييرات." });

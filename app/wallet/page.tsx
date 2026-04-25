@@ -13,7 +13,7 @@ import { useAuth } from "@/components/AuthProvider";
 
 export default function WalletPage() {
   // ✅ Balance comes from the global AuthProvider — same source as Navbar
-  const { user, profile, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
 
   const [transactions, setTransactions] = useState<any[]>([]);
   const [txLoading, setTxLoading] = useState(true);

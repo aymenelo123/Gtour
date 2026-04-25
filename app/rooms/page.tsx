@@ -19,7 +19,16 @@ import { toast } from "sonner";
 
 function RoomsContent() {
   const router = useRouter();
-  const { user, profile, refreshProfile } = useAuth();
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (user) {
+      supabase.from("profiles").select("*").eq("id", user.id).single().then(({data}) => {
+        if (data) setProfile(data);
+      });
+    }
+  }, [user]);
   const { balance, deductBalance } = useWallet();
   const [matches, setMatches] = useState(mockMatches);
   

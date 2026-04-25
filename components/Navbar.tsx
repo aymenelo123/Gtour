@@ -12,7 +12,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isMuted, toggleMute } = useAudio();
-  const { user, profile, isLoading, signOut, refreshProfile } = useAuth();
+  const { user, profile, isLoading, signOut } = useAuth();
   // Localized state to prevent Context Hell and Hydration Deadlock
   const [localBalance, setLocalBalance] = useState<number | null>(null);
   const [imageError, setImageError] = useState(false);
